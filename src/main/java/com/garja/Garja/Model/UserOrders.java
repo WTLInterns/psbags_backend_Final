@@ -32,7 +32,10 @@ public class UserOrders {
     private String image;
     private String paymentStatus;
     private String paymentType;
-
+    private Long shiprocketOrderId;
+    private Long shipmentId;
+    private Long awbCode;
+    private String trackingUrl;
 
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
@@ -41,5 +44,7 @@ public class UserOrders {
      @ManyToOne
     @JoinColumn(name = "address_id", referencedColumnName = "id")
     private Address address;
+
+    
 
 }

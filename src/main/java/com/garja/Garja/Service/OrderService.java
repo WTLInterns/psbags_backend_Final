@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -58,6 +59,9 @@ public class OrderService {
 
     @Value("${razorpay.key.secret}")
     private String razorpayKeySecret;
+
+    @Autowired
+    private ShiprocketService shiprocketService;
 
     @Transactional
     public OrderResponse buyNow(Integer userId, BuyNowRequest request) {
@@ -118,7 +122,7 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderResponse checkoutCart(Integer userId, int addressId) { 
+    public OrderResponse checkoutCart(Integer userId, int addressId) throws Exception { 
         Cart cart = cartService.getOrCreateCart(userId);
         Address address = addresssRepo.findById(addressId)
                 .orElseThrow(() -> new RuntimeException("Address not found with ID: " + addressId));
@@ -165,6 +169,7 @@ public class OrderService {
         }
 
         // Create one order per cart item (purchase history: one row per product)
+        List<UserOrders> savedOrders = new ArrayList<>();
         for (var item : cart.getItems()) {
             Product product = item.getProduct();
             double price = Double.parseDouble(product.getPrice());
@@ -182,8 +187,73 @@ public class OrderService {
             lineOrder.setPaymentStatus("SUCCESS");
             lineOrder.setPaymentType("RAZORPAY");
             lineOrder.setAddress(address);
+            UserOrders persisted = orderRepository.save(lineOrder);
+            savedOrders.add(persisted);
+        }
 
-            orderRepository.save(lineOrder);
+        // Create a single consolidated Shiprocket order for the whole checkout
+        try {
+            // Use first product's details (no counts)
+            var firstItem = cart.getItems().get(0);
+            String firstProductName = firstItem.getProduct().getProductName();
+            String paymentTypeForDbAndShiprocket = "RAZORPAY"; // maps to Prepaid for Shiprocket
+            double firstItemPrice = Double.parseDouble(firstItem.getProduct().getPrice());
+            int firstItemQty = firstItem.getQuantity();
+            double firstItemTotal = firstItemPrice * firstItemQty;
+            String shiprocketResp = shiprocketService.createOrder(
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getEmail(),
+                    user.getPhoneNumber(),
+                    address.getAddress(),
+                    address.getCity(),
+                    address.getState(),
+                    address.getCountry(),
+                    address.getPincode(),
+                    firstProductName,
+                    paymentTypeForDbAndShiprocket,
+                    firstItemQty,
+                    firstItemTotal
+            );
+            System.out.println("Shiprocket create order response: " + shiprocketResp);
+
+            // Store Shiprocket identifiers in each saved order (order_id, shipment_id)
+            try {
+                Long shipOrderId = null;
+                Long shipmentIdVal = null;
+                JSONObject resp = new JSONObject(shiprocketResp);
+                // Some responses may wrap data
+                if (resp.has("order_id") && !resp.isNull("order_id")) {
+                    shipOrderId = resp.optLong("order_id");
+                }
+                if (resp.has("shipment_id") && !resp.isNull("shipment_id")) {
+                    shipmentIdVal = resp.optLong("shipment_id");
+                }
+                if ((shipOrderId == null || shipmentIdVal == null) && resp.has("data") && !resp.isNull("data")) {
+                    JSONObject data = resp.optJSONObject("data");
+                    if (data != null) {
+                        if (shipOrderId == null && data.has("order_id") && !data.isNull("order_id")) {
+                            shipOrderId = data.optLong("order_id");
+                        }
+                        if (shipmentIdVal == null && data.has("shipment_id") && !data.isNull("shipment_id")) {
+                            shipmentIdVal = data.optLong("shipment_id");
+                        }
+                    }
+                }
+
+                if (shipOrderId != null || shipmentIdVal != null) {
+                    for (UserOrders o : savedOrders) {
+                        if (shipOrderId != null) o.setShiprocketOrderId(shipOrderId);
+                        if (shipmentIdVal != null) o.setShipmentId(shipmentIdVal);
+                        orderRepository.save(o);
+                    }
+                }
+            } catch (Exception parseEx) {
+                System.err.println("Failed to parse Shiprocket response for storing IDs: " + parseEx.getMessage());
+            }
+        } catch (Exception e) {
+            // Do not fail the checkout if Shiprocket creation fails; log and proceed
+            System.err.println("Failed to create Shiprocket order: " + e.getMessage());
         }
 
         // Clear cart after successful order
@@ -228,10 +298,11 @@ public class OrderService {
         response.put("status", rpOrder.get("status"));
         return response;
     }
+    
 
     // Verify Razorpay signature and, on success, create orders from cart and clear cart
     @Transactional
-    public OrderResponse verifyAndSaveOrder(RazorpayPaymentVerificationRequest request, Integer userId, int addressId) {
+    public OrderResponse verifyAndSaveOrder(RazorpayPaymentVerificationRequest request, Integer userId, int addressId) throws Exception {
         if (request == null || request.getRazorpayOrderId() == null || request.getRazorpayPaymentId() == null || request.getRazorpaySignature() == null) {
             throw new RuntimeException("Incomplete payment verification payload");
         }

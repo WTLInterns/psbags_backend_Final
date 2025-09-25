@@ -36,6 +36,10 @@ public class Address {
 
     private String address;
 
+    private String state;
+
+    private String country;
+
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;

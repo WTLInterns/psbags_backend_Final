@@ -18,6 +18,9 @@ import com.garja.Garja.DTO.requests.RazorpayPaymentVerificationRequest;
 import org.json.JSONObject;
 import com.razorpay.RazorpayException;
 
+
+
+
 @RestController
 @RequestMapping("/user/orders")
 @RequiredArgsConstructor
@@ -44,7 +47,7 @@ public class OrderController {
     }
 
     @PostMapping("/checkout")
-    public ResponseEntity<OrderResponse> checkoutCart(@RequestParam int addressId) {
+    public ResponseEntity<OrderResponse> checkoutCart(@RequestParam int addressId) throws Exception {
         try {
             // Get user ID from JWT token
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -57,8 +60,12 @@ public class OrderController {
             OrderResponse errorResponse = new OrderResponse();
             errorResponse.setMessage(e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
+            
         }
+ 
     }
+
+    
 
     // Create Razorpay Order (called before opening Razorpay checkout on frontend)
     @PostMapping("/create-razorpay-order")
@@ -80,7 +87,7 @@ public class OrderController {
 
     // Verify payment signature and create orders from cart
     @PostMapping("/verify-payment")
-    public ResponseEntity<?> verifyPayment(@RequestBody RazorpayPaymentVerificationRequest request, @RequestParam int addressId) {
+    public ResponseEntity<?> verifyPayment(@RequestBody RazorpayPaymentVerificationRequest request, @RequestParam int addressId) throws Exception {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
