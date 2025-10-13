@@ -27,7 +27,6 @@ public class OAuth2Controller {
     @GetMapping("/google")
     public void googleLogin(HttpServletResponse response) throws IOException {
         System.out.println("OAuth2Controller: /auth/google endpoint called");
-        // This will redirect to Google OAuth2 authorization endpoint with account selection
         String redirectUrl = "/oauth2/authorization/google?prompt=select_account";
         System.out.println("Redirecting to: " + redirectUrl);
         response.sendRedirect(redirectUrl);
@@ -46,16 +45,12 @@ public class OAuth2Controller {
                 return ResponseEntity.badRequest().body("No user info provided");
             }
             
-            // Create a mock OAuth2User from the userInfo
             MockOAuth2User mockUser = new MockOAuth2User(userInfo);
             
-            // Process the user (create or update)
             User user = oAuth2UserService.processOAuth2User(mockUser);
             
-            // Generate JWT token
             String token = jwtUtils.generateToken(user);
             
-            // Return the token
             Map<String, String> response = new HashMap<>();
             response.put("token", token);
             response.put("message", "Authentication successful");
@@ -75,7 +70,6 @@ public class OAuth2Controller {
         return ResponseEntity.ok("OAuth2 login successful - Backend is running!");
     }
     
-    // Mock OAuth2User implementation for direct Google API integration
     private static class MockOAuth2User implements org.springframework.security.oauth2.core.user.OAuth2User {
         private final Map<String, Object> attributes;
         

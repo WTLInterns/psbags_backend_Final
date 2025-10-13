@@ -4,8 +4,13 @@ import okhttp3.*;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.garja.Garja.DTO.response.TrackingResponse;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -20,8 +25,8 @@ public class ShiprocketService {
 
     private String login() throws Exception {
         String loginPayload = "{\n" +
-                "  \"email\": \"panditprashant5365@gmail.com\",\n" +
-                "  \"password\": \"zwTy0B$ADt&fDi^G\"\n" +
+                "  \"email\": \"rse9733@gmail.com\",\n" +
+                "  \"password\": \"gj$fA1I1!SdDdQO$\"\n" +
                 "}";
         RequestBody loginBody = RequestBody.create(JSON, loginPayload);
 
@@ -38,88 +43,117 @@ public class ShiprocketService {
         return loginJson.getString("token");
     }
 
-    public String createOrder(String firstName,String lastName,String email,String phoneNumber,String address,String city,String state,String country,String pincode,String productName,String paymentType,int quantity,double totalAmount) throws Exception {
+    public String createOrder(
+        String firstName, String lastName, String email, String phoneNumber,
+        String address, String city, String state, String country, String pincode,
+        List<String> productNames, String paymentType, List<Integer> quantities, List<Double> prices
+) throws Exception {
+    String token = login();
+
+    long millis = System.currentTimeMillis();
+    String uniquePart = String.valueOf(millis).substring(4, 13);
+    String orderId = "GG-ORDER-" + uniquePart;
+    String orderDate = LocalDateTime.now()
+            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    System.out.println(token);
+
+    String phoneDigits = (phoneNumber == null ? "" : phoneNumber.replaceAll("[^0-9]", ""));
+    if (phoneDigits.length() > 10) {
+        phoneDigits = phoneDigits.substring(phoneDigits.length() - 10);
+    }
+    if (phoneDigits.length() != 10) {
+        throw new IllegalArgumentException("Invalid billing phone. Provide a 10-digit number. Provided: " + phoneNumber);
+    }
+    long billingPhone = Long.parseLong(phoneDigits);
+
+    String srPaymentMethod = (paymentType != null && paymentType.equalsIgnoreCase("COD")) ? "COD" : "Prepaid";
+
+    StringBuilder orderItemsBuilder = new StringBuilder();
+    double totalAmount = 0;
+    for (int i = 0; i < productNames.size(); i++) {
+        String sku = "SKU-" + (millis + i); 
+        int qty = quantities.get(i);
+        double price = prices.get(i);
+        totalAmount += (price * qty);
+
+        orderItemsBuilder.append("    {\n")
+                .append("      \"name\": \"").append(productNames.get(i)).append("\",\n")
+                .append("      \"sku\": \"").append(sku).append("\",\n")
+                .append("      \"units\": ").append(qty).append(",\n")
+                .append("      \"selling_price\": ").append(price).append(",\n")
+                .append("      \"tax_amount\": 0,\n")
+                .append("      \"discount\": 0\n")
+                .append("    }");
+
+        if (i != productNames.size() - 1) {
+            orderItemsBuilder.append(",\n");
+        } else {
+            orderItemsBuilder.append("\n");
+        }
+    }
+
+    String orderPayload = "{\n" +
+            "  \"order_id\": \"" + orderId + "\",\n" +
+            "  \"order_date\": \"" + orderDate + "\",\n" +
+            "  \"pickup_location\": \"Home\",\n" +
+            "  \"channel_id\": 8372908,\n" +
+            "  \"billing_customer_name\": \"" + firstName + "\",\n" +
+            "  \"billing_last_name\": \"" + lastName + "\",\n" +
+            "  \"billing_email\": \"" + email + "\",\n" +
+            "  \"billing_phone\": \"91" + billingPhone + "\",\n" +
+            "  \"billing_address\": \"" + address + "\",\n" +
+            "  \"billing_city\": \"" + city + "\",\n" +
+            "  \"billing_state\": \"" + "Maharashtra" + "\",\n" +
+            "  \"billing_country\": \"India\",\n" +
+            "  \"billing_pincode\": \"" + pincode + "\",\n" +
+            "  \"shipping_is_billing\": true,\n" +
+            "  \"payment_method\": \"" + srPaymentMethod + "\",\n" +
+            "  \"order_items\": [\n" + orderItemsBuilder + "  ],\n" +
+            "  \"sub_total\": " + totalAmount + ",\n" +
+            "  \"total\": " + totalAmount + ",\n" +
+            "  \"length\": 30,\n" +
+            "  \"breadth\": 20,\n" +
+            "  \"height\": 10,\n" +
+            "  \"weight\": 1.2\n" +
+            "}";
+
+    RequestBody orderBody = RequestBody.create(JSON, orderPayload);
+
+    Request orderRequest = new Request.Builder()
+            .url("https://apiv2.shiprocket.in/v1/external/orders/create/adhoc")
+            .post(orderBody)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("Authorization", "Bearer " + token)
+            .build();
+
+    Response orderResponse = client.newCall(orderRequest).execute();
+    return orderResponse.body().string();
+}
+
+    public TrackingResponse getTrackingData(String shipmentId) throws Exception {
         String token = login();
 
-        long millis = System.currentTimeMillis();
-        String uniquePart = String.valueOf(millis).substring(4, 13);
-        String sku = String.valueOf(millis).substring(4, 9);
-        String orderId = "GG-ORDER-" + uniquePart;
-        String orderDate = LocalDateTime.now()
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                System.out.println(token);
+        OkHttpClient client = new OkHttpClient();
 
-        // Sanitize phone to digits and validate to exactly 10 digits (India)
-        String phoneDigits = (phoneNumber == null ? "" : phoneNumber.replaceAll("[^0-9]", ""));
-        if (phoneDigits.length() > 10) {
-            // keep last 10 for local part when excessive digits (strip country code)
-            phoneDigits = phoneDigits.substring(phoneDigits.length() - 10);
-        }
-        if (phoneDigits.length() != 10) {
-            throw new IllegalArgumentException("Invalid billing phone. Provide a 10-digit number. Provided: " + phoneNumber);
-        }
-        long billingPhone = Long.parseLong(phoneDigits);
-
-        // Map payment type to Shiprocket-accepted values
-        String srPaymentMethod = (paymentType != null && paymentType.equalsIgnoreCase("COD")) ? "COD" : "Prepaid";
-
-        String orderPayload = "{\n" +
-                "  \"order_id\": \"" + orderId + "\",\n" +
-                "  \"order_date\": \"" + orderDate + "\",\n" +
-                "  \"pickup_location\": \"GRADUATE GULACHA CHAHA&LASSI PVTLTD\",\n" +
-                "  \"channel_id\": 8207072,\n" +
-                "  \"billing_customer_name\": \"" + firstName + "\",\n" +
-                "  \"billing_last_name\": \"" + lastName + "\",\n" +
-                "  \"billing_email\": \"" + email + "\",\n" +
-                "  \"billing_phone\": " + billingPhone + ",\n" +
-                "  \"billing_address\": \"" + address + "\",\n" +
-                "  \"billing_city\": \"" + city + "\",\n" +
-                "  \"billing_state\": \"" + state + "\",\n" +
-                "  \"billing_country\": \"" + country + "\",\n" +
-                "  \"billing_pincode\": \"" + pincode + "\",\n" +
-                "  \"shipping_is_billing\": true,\n" +
-                "  \"payment_method\": \"" + srPaymentMethod + "\",\n" +
-                "  \"order_items\": [\n" +
-                "    {\n" +
-                "      \"name\": \"" + productName + "\",\n" +
-                "      \"sku\": \"" + sku + "\",\n" +
-                "      \"units\": " + quantity + ",\n" +
-                "      \"selling_price\": " + totalAmount + ",\n" +
-                "      \"tax_amount\": 0,\n" +
-                "      \"discount\": 0\n" +
-                "    }\n" +
-                "  ],\n" +
-                "  \"sub_total\": " + totalAmount + ",\n" +
-                "  \"total\": " + totalAmount + ",\n" +
-                "  \"length\": 30,\n" +
-                "  \"breadth\": 20,\n" +
-                "  \"height\": 10,\n" +
-                "  \"weight\": 1.2\n" +
-                "}";
-
-        RequestBody orderBody = RequestBody.create(JSON, orderPayload);
-
-        Request orderRequest = new Request.Builder()
-                .url("https://apiv2.shiprocket.in/v1/external/orders/create/adhoc")
-                .post(orderBody)
+        Request request = new Request.Builder()
+                .url("https://apiv2.shiprocket.in/v1/external/courier/track/awb/" + shipmentId)
+                .get() 
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Authorization", "Bearer " + token)
                 .build();
 
-        Response orderResponse = client.newCall(orderRequest).execute();
-        return orderResponse.body().string();
-    }
-
-    public void createOrder(String firstName, String lastName, String email, Long phoneNumber, String address, String city,
-                String state, String country, String pincode, String productName, String paymentType, int quantity,
-                double totalAmount) {
-        try {
-            // Delegate to the main method by converting phone number to String
-            createOrder(firstName, lastName, email,
-                    phoneNumber == null ? null : String.valueOf(phoneNumber),
-                    address, city, state, country, pincode, productName, paymentType, quantity, totalAmount);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create Shiprocket order: " + e.getMessage(), e);
+        Response response = client.newCall(request).execute();
+        if (!response.isSuccessful()) {
+            String errBody = response.body() != null ? response.body().string() : "";
+            throw new RuntimeException("Shiprocket track API failed: " + response.code() + " - " + errBody);
         }
+
+        String jsonResponse = response.body() != null ? response.body().string() : "{}";
+
+        ObjectMapper mapper = new ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true);
+        return mapper.readValue(jsonResponse, TrackingResponse.class);
     }
+    
 }

@@ -71,17 +71,14 @@ public class OrderService {
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // Validate product is active
         if (product.getIsActive()=="0") {
             throw new RuntimeException("Product is not available");
         }
 
-        // Validate stock
         if (product.getQuantity() < request.getQuantity()) {
             throw new RuntimeException("Insufficient stock available");
         }
 
-        // Calculate total amount
         double price;
         try {
             price = Double.parseDouble(product.getPrice());
@@ -90,11 +87,9 @@ public class OrderService {
         }
         double totalAmount = price * request.getQuantity();
 
-        // Deduct stock
         product.setQuantity(product.getQuantity() - request.getQuantity());
         productRepository.save(product);
 
-        // Create order
         UserOrders order = new UserOrders();
         order.setUser(user);
         order.setProductName(product.getProductName());
@@ -137,7 +132,6 @@ public class OrderService {
         int totalQuantity = 0;
         int itemCount = cart.getItems().size();
 
-        // Validate all items and calculate totals
         for (var item : cart.getItems()) {
             Product product = item.getProduct();
 
@@ -159,16 +153,13 @@ public class OrderService {
             totalQuantity += item.getQuantity();
         }
 
-        // Payment must be verified separately via verifyAndSaveOrder. Do not initiate payment here.
 
-        // Deduct stock for all items
         for (var item : cart.getItems()) {
             Product product = item.getProduct();
             product.setQuantity(product.getQuantity() - item.getQuantity());
             productRepository.save(product);
         }
 
-        // Create one order per cart item (purchase history: one row per product)
         List<UserOrders> savedOrders = new ArrayList<>();
         for (var item : cart.getItems()) {
             Product product = item.getProduct();
@@ -191,15 +182,19 @@ public class OrderService {
             savedOrders.add(persisted);
         }
 
-        // Create a single consolidated Shiprocket order for the whole checkout
         try {
-            // Use first product's details (no counts)
-            var firstItem = cart.getItems().get(0);
-            String firstProductName = firstItem.getProduct().getProductName();
-            String paymentTypeForDbAndShiprocket = "RAZORPAY"; // maps to Prepaid for Shiprocket
-            double firstItemPrice = Double.parseDouble(firstItem.getProduct().getPrice());
-            int firstItemQty = firstItem.getQuantity();
-            double firstItemTotal = firstItemPrice * firstItemQty;
+            String paymentTypeForDbAndShiprocket = "RAZORPAY";
+            java.util.List<String> productNames = new java.util.ArrayList<>();
+            java.util.List<Integer> quantities = new java.util.ArrayList<>();
+            java.util.List<Double> prices = new java.util.ArrayList<>();
+
+            for (var item : cart.getItems()) {
+                Product p = item.getProduct();
+                productNames.add(p.getProductName());
+                quantities.add(item.getQuantity());
+                prices.add(Double.parseDouble(p.getPrice())); 
+            }
+
             String shiprocketResp = shiprocketService.createOrder(
                     user.getFirstName(),
                     user.getLastName(),
@@ -210,19 +205,17 @@ public class OrderService {
                     address.getState(),
                     address.getCountry(),
                     address.getPincode(),
-                    firstProductName,
+                    productNames,
                     paymentTypeForDbAndShiprocket,
-                    firstItemQty,
-                    firstItemTotal
+                    quantities,
+                    prices
             );
             System.out.println("Shiprocket create order response: " + shiprocketResp);
 
-            // Store Shiprocket identifiers in each saved order (order_id, shipment_id)
             try {
                 Long shipOrderId = null;
                 Long shipmentIdVal = null;
                 JSONObject resp = new JSONObject(shiprocketResp);
-                // Some responses may wrap data
                 if (resp.has("order_id") && !resp.isNull("order_id")) {
                     shipOrderId = resp.optLong("order_id");
                 }
@@ -252,14 +245,11 @@ public class OrderService {
                 System.err.println("Failed to parse Shiprocket response for storing IDs: " + parseEx.getMessage());
             }
         } catch (Exception e) {
-            // Do not fail the checkout if Shiprocket creation fails; log and proceed
             System.err.println("Failed to create Shiprocket order: " + e.getMessage());
         }
 
-        // Clear cart after successful order
         cartService.clearCart(userId);
 
-        // Return a summary response (keeps API backward compatible)
         return new OrderResponse(
                 0,
                 LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
@@ -274,7 +264,6 @@ public class OrderService {
         );
     }
 
-    // Create Razorpay order and return minimal details to frontend
     public Map<String, Object> createRazorpayOrder(RazorpayOrderRequest request, Integer userId) throws RazorpayException {
         if (request == null || request.getAmount() <= 0) {
             throw new IllegalArgumentException("Invalid amount for Razorpay order");
@@ -283,7 +272,7 @@ public class OrderService {
         RazorpayClient razorpay = new RazorpayClient(razorpayKeyId, razorpayKeySecret);
 
         JSONObject orderRequest = new JSONObject();
-        orderRequest.put("amount", (int) (request.getAmount() * 100)); // amount in paise
+        orderRequest.put("amount", (int) (request.getAmount() * 100)); 
         orderRequest.put("currency", request.getCurrency() == null ? "INR" : request.getCurrency());
         orderRequest.put("receipt", request.getReceipt() == null ? ("rcpt_" + System.currentTimeMillis()) : request.getReceipt());
         orderRequest.put("payment_capture", 1);
@@ -300,7 +289,6 @@ public class OrderService {
     }
     
 
-    // Verify Razorpay signature and, on success, create orders from cart and clear cart
     @Transactional
     public OrderResponse verifyAndSaveOrder(RazorpayPaymentVerificationRequest request, Integer userId, int addressId) throws Exception {
         if (request == null || request.getRazorpayOrderId() == null || request.getRazorpayPaymentId() == null || request.getRazorpaySignature() == null) {
@@ -313,7 +301,6 @@ public class OrderService {
             throw new RuntimeException("Invalid payment signature");
         }
 
-        // Signature is valid -> proceed with creating orders from cart
         return checkoutCart(userId, addressId);
     }
 
@@ -323,7 +310,6 @@ public class OrderService {
             SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
             sha256Hmac.init(secretKey);
             byte[] signedBytes = sha256Hmac.doFinal(data.getBytes());
-            // Convert to lowercase hex string to match Razorpay's signature format
             StringBuilder sb = new StringBuilder();
             for (byte b : signedBytes) {
                 sb.append(String.format("%02x", b));
@@ -433,15 +419,12 @@ public List<AdminOrderResponse> getAllOrdersForAdmin(String email) {
     public List<UserWithOrderStatsDTO> getAllUserByRole(String email) {
         User user = this.userRepository.findByEmail(email).orElseThrow();
 
-    // get all users with role USER
     List<User> users = userRepository.findAll().stream()
             .filter(u -> "USER".equalsIgnoreCase(u.getRole()))
             .toList();
 
-    // get all orders (single DB hit)
     List<UserOrders> orders = orderRepository.findAll();
 
-    // map users to response with counts
     return users.stream().map(u -> {
         List<UserOrders> userOrders = orders.stream()
                 .filter(o -> o.getUser().getId() == u.getId())

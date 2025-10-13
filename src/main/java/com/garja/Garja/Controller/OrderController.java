@@ -29,6 +29,8 @@ public class OrderController {
     private final OrderService orderService;
     private final UserRepo userRepository;
 
+
+//use mai nahi hai abhi hai api 
     @PostMapping("/buy-now")
     public ResponseEntity<OrderResponse> buyNow(@RequestBody BuyNowRequest request) {
         try {
@@ -49,7 +51,6 @@ public class OrderController {
     @PostMapping("/checkout")
     public ResponseEntity<OrderResponse> checkoutCart(@RequestParam int addressId) throws Exception {
         try {
-            // Get user ID from JWT token
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
             Integer userId = getUserIdFromEmail(email);
@@ -67,7 +68,7 @@ public class OrderController {
 
     
 
-    // Create Razorpay Order (called before opening Razorpay checkout on frontend)
+    // create razorpay order create to initiate payment
     @PostMapping("/create-razorpay-order")
     public ResponseEntity<?> createRazorpayOrder(@RequestBody RazorpayOrderRequest request) {
         try {
@@ -85,7 +86,7 @@ public class OrderController {
         }
     }
 
-    // Verify payment signature and create orders from cart
+    // verify payment and save order details
     @PostMapping("/verify-payment")
     public ResponseEntity<?> verifyPayment(@RequestBody RazorpayPaymentVerificationRequest request, @RequestParam int addressId) throws Exception {
         try {
@@ -114,7 +115,7 @@ public class OrderController {
         }
     }
 
-    // Helper method to get userId from email
+    // helper method to get user
     private Integer getUserIdFromEmail(String email) {
         try {
             if (email == null || email.trim().isEmpty()) {

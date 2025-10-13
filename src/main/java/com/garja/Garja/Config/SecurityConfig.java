@@ -85,4 +85,12 @@ public class SecurityConfig {
 		return config.getAuthenticationManager();
 	}
 	
+
+	// protected void configure(HttpSecurity http) throws Exception {
+    //     // Disable CSRF for /webhook so POST requests work
+    //     http.csrf().ignoringAntMatchers("/webhook")
+    //         .authorizeRequests()
+    //         .anyRequest().permitAll();
+    // }
+	
 }
