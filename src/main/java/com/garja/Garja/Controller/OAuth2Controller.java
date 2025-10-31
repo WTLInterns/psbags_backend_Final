@@ -15,7 +15,7 @@ import java.util.HashMap;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "https://mygarja.com")
+@CrossOrigin(origins = "http://localhost:3000")
 public class OAuth2Controller {
 
     @Autowired

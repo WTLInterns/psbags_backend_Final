@@ -23,14 +23,14 @@ public class WishlistService {
     private final UserRepo userRepository;
     private final ProductRepo productRepository;
 
-    public String addToWishlist(int userId,int productId){
-        User user = userRepository.findById(userId)
+    public String addToWishlist(String email, int productId){
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(()-> new RuntimeException("User not found"));
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(()-> new RuntimeException("Product not found"));
 
-        if (wishlistRepository.findByUserIdAndProductId(userId,productId).isPresent()){
+        if (wishlistRepository.findByUserIdAndProductId(user.getId(), productId).isPresent()){
             return "Product Already in wishlist";
         }
         Wishlist wishlist = Wishlist.builder()
@@ -41,15 +41,27 @@ public class WishlistService {
         return "Product added to Wishlist";
     }
 
-    public String removeFromWishlist(int wishlistId){
+    public String removeFromWishlist(int wishlistId, String email){
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(()-> new RuntimeException("User not found"));
+        
         Wishlist wishlist = wishlistRepository.findById(wishlistId)
                 .orElseThrow(()->new RuntimeException("Wishlist item not found"));
+        
+        // Check if the wishlist item belongs to the user
+        if (wishlist.getUser().getId() != user.getId()) {
+            throw new RuntimeException("You are not authorized to delete this wishlist item");
+        }
+        
         wishlistRepository.delete(wishlist);
         return "Product removed from wishlist";
     }
 
-    public List<WishlistResponse> getUserWishlist(int userId) {
-        List<Wishlist> wishlistItems = wishlistRepository.findByUserId(userId);
+    public List<WishlistResponse> getUserWishlist(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(()-> new RuntimeException("User not found"));
+        
+        List<Wishlist> wishlistItems = wishlistRepository.findByUserId(user.getId());
 
         List<WishlistResponse> responseList = wishlistItems.stream()
                 .map(item-> WishlistResponse.builder()
@@ -63,8 +75,11 @@ public class WishlistService {
         return responseList;
     }
 
-    public String removeProductFromWishlist(int userId, int productId) {
-        List<Wishlist> wishlistItems = wishlistRepository.findByUserId(userId);
+    public String removeProductFromWishlist(String email, int productId) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(()-> new RuntimeException("User not found"));
+        
+        List<Wishlist> wishlistItems = wishlistRepository.findByUserId(user.getId());
 
         Wishlist wishlistItem = wishlistItems.stream()
                 .filter(item -> item.getProduct().getId()==productId)
