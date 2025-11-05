@@ -32,16 +32,17 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             Authentication authentication) throws IOException, ServletException {
 
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        
+
         // Process and save user data
         User user = oAuth2UserService.processOAuth2User(oAuth2User);
-        
+
         // Generate JWT token
         String token = jwtUtils.generateToken(user);
-        
+
         // Redirect to frontend with token
-        String targetUrl = "http://localhost:3000/auth/callback?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
-        
+        String targetUrl = "https://mygarja.com/auth/callback?token="
+                + URLEncoder.encode(token, StandardCharsets.UTF_8);
+
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }
