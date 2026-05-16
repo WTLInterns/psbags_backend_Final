@@ -8,11 +8,11 @@
 		<version>3.5.5</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.garja</groupId>
-	<artifactId>Garja</artifactId>
+	<groupId>com.psbags</groupId>
+	<artifactId>PSBags</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>Garja</name>
-	<description>Demo project for Spring Boot</description>
+	<name>PSBags</name>
+	<description>PS Bags E-commerce Platform</description>
 	<url/>
 	<licenses>
 		<license/>
