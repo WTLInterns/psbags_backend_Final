@@ -34,6 +34,12 @@ public class PublicController {
         return this.productService.getProductsByCategory(category);
     }
 
+    @GetMapping("/getProductBySubcategory")
+    public List<Product> getAllProductsBySubcategory(@RequestParam String subcategoryName){ 
+        
+        return this.productService.getProductsBySubcategory(subcategoryName);
+    }
+
     @GetMapping("/getLatestProducts")
     public List<Product> getLatestProducts(){
         

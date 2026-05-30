@@ -50,8 +50,22 @@ public class Product {
 
     private String imagePublicId;
 
+    private String imageUrl2;
+
+    private String imagePublicId2;
+
+    private String imageUrl3;
+
+    private String imagePublicId3;
+
+    private String imageUrl4;
+
+    private String imagePublicId4;
+
     
     private String category;
+
+    private String subcategoryName;
 
     private String date;
 

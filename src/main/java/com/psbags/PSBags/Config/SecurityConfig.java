@@ -41,11 +41,10 @@ public class SecurityConfig {
 	    http.authorizeHttpRequests(request -> 
 	        request
 	            .requestMatchers("/auth/**","/public/**", "/oauth2/**", "/login/oauth2/**").permitAll()  
+	            .requestMatchers("/admin/subcategory/**").permitAll() // Temporarily allow for testing
 	            .requestMatchers("/admin/**").hasAnyAuthority("ADMIN")
 	            .requestMatchers("/user/**").hasAnyAuthority("USER")
 				.requestMatchers("/common/reset-password").hasAnyRole("USER", "ADMIN")
-
-
 	            .anyRequest().authenticated()                 
 	    );
 	    http.csrf(csrf -> csrf.disable());

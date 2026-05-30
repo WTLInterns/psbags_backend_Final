@@ -38,6 +38,12 @@ public class ProductRequests {
 
     private MultipartFile image;
 
+    private MultipartFile image2;
+
+    private MultipartFile image3;
+
+    private MultipartFile image4;
+
     private String date;
 
     private String time;
@@ -45,4 +51,6 @@ public class ProductRequests {
     
 
     private String category;
+
+    private String subcategoryName;
 }
