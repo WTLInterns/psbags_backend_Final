@@ -3,8 +3,10 @@ package com.psbags.PSBags.Service;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.psbags.PSBags.DTO.requests.ProductRequests;
@@ -50,26 +52,92 @@ public class ProductService {
         products.setXXL(productRequests.getXXL());
         products.setCategory(productRequests.getCategory());
         products.setSubcategoryName(productRequests.getSubcategoryName());
-if (productRequests.getImage() != null && !productRequests.getImage().isEmpty()) {
-            Map uploadResult = cloudinaryService.upload(productRequests.getImage());
-            products.setImageUrl(uploadResult.get("secure_url").toString());
-            products.setImagePublicId(uploadResult.get("public_id").toString());
+
+        // Parallel image uploads using CompletableFuture
+        List<CompletableFuture<Void>> uploadFutures = new ArrayList<>();
+
+        // Image 1 upload
+        if (productRequests.getImage() != null && !productRequests.getImage().isEmpty()) {
+            CompletableFuture<Void> image1Future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return cloudinaryService.upload(productRequests.getImage());
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to upload image 1", e);
+                }
+            }).thenAccept(uploadResult -> {
+                products.setImageUrl(uploadResult.get("secure_url").toString());
+                products.setImagePublicId(uploadResult.get("public_id").toString());
+            });
+            uploadFutures.add(image1Future);
         }
+
+        // Image 2 upload
         if (productRequests.getImage2() != null && !productRequests.getImage2().isEmpty()) {
-            Map uploadResult2 = cloudinaryService.upload(productRequests.getImage2());
-            products.setImageUrl2(uploadResult2.get("secure_url").toString());
-            products.setImagePublicId2(uploadResult2.get("public_id").toString());
+            CompletableFuture<Void> image2Future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return cloudinaryService.upload(productRequests.getImage2());
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to upload image 2", e);
+                }
+            }).thenAccept(uploadResult2 -> {
+                products.setImageUrl2(uploadResult2.get("secure_url").toString());
+                products.setImagePublicId2(uploadResult2.get("public_id").toString());
+            });
+            uploadFutures.add(image2Future);
         }
+
+        // Image 3 upload
         if (productRequests.getImage3() != null && !productRequests.getImage3().isEmpty()) {
-            Map uploadResult3 = cloudinaryService.upload(productRequests.getImage3());
-            products.setImageUrl3(uploadResult3.get("secure_url").toString());
-            products.setImagePublicId3(uploadResult3.get("public_id").toString());
+            CompletableFuture<Void> image3Future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return cloudinaryService.upload(productRequests.getImage3());
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to upload image 3", e);
+                }
+            }).thenAccept(uploadResult3 -> {
+                products.setImageUrl3(uploadResult3.get("secure_url").toString());
+                products.setImagePublicId3(uploadResult3.get("public_id").toString());
+            });
+            uploadFutures.add(image3Future);
         }
+
+        // Image 4 upload
         if (productRequests.getImage4() != null && !productRequests.getImage4().isEmpty()) {
-            Map uploadResult4 = cloudinaryService.upload(productRequests.getImage4());
-            products.setImageUrl4(uploadResult4.get("secure_url").toString());
-            products.setImagePublicId4(uploadResult4.get("public_id").toString());
+            CompletableFuture<Void> image4Future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return cloudinaryService.upload(productRequests.getImage4());
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to upload image 4", e);
+                }
+            }).thenAccept(uploadResult4 -> {
+                products.setImageUrl4(uploadResult4.get("secure_url").toString());
+                products.setImagePublicId4(uploadResult4.get("public_id").toString());
+            });
+            uploadFutures.add(image4Future);
         }
+
+        // Image 5 upload
+        if (productRequests.getImage5() != null && !productRequests.getImage5().isEmpty()) {
+            CompletableFuture<Void> image5Future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return cloudinaryService.upload(productRequests.getImage5());
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to upload image 5", e);
+                }
+            }).thenAccept(uploadResult5 -> {
+                products.setImageUrl5(uploadResult5.get("secure_url").toString());
+                products.setImagePublicId5(uploadResult5.get("public_id").toString());
+            });
+            uploadFutures.add(image5Future);
+        }
+
+        // Wait for all uploads to complete before saving to database
+        try {
+            CompletableFuture.allOf(uploadFutures.toArray(new CompletableFuture[0])).join();
+        } catch (Exception e) {
+            throw new IOException("One or more image uploads failed", e);
+        }
+
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         String date = now.format(dateFormatter);
         products.setDate(date);
@@ -142,6 +210,14 @@ public ProductResponse updateProduct(int productId, ProductRequests request, Str
             product.setImageUrl4(uploadResult4.get("secure_url").toString());
             product.setImagePublicId4(uploadResult4.get("public_id").toString());
         }
+        if (request.getImage5() != null && !request.getImage5().isEmpty()) {
+            if (product.getImagePublicId5() != null && !product.getImagePublicId5().isEmpty()) {
+                cloudinaryService.delete(product.getImagePublicId5());
+            }
+            Map uploadResult5 = cloudinaryService.upload(request.getImage5());
+            product.setImageUrl5(uploadResult5.get("secure_url").toString());
+            product.setImagePublicId5(uploadResult5.get("public_id").toString());
+        }
 
         productRepo.save(product);
 
@@ -174,6 +250,9 @@ public ProductResponse updateProduct(int productId, ProductRequests request, Str
         }
         if (product.getImagePublicId4() != null && !product.getImagePublicId4().isEmpty()) {
             cloudinaryService.delete(product.getImagePublicId4());
+        }
+        if (product.getImagePublicId5() != null && !product.getImagePublicId5().isEmpty()) {
+            cloudinaryService.delete(product.getImagePublicId5());
         }
 
         productRepo.delete(product);

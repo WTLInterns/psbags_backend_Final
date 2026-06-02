@@ -18,14 +18,18 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.Authentication;
 
 import com.psbags.PSBags.DTO.requests.ProductRequests;
+import com.psbags.PSBags.DTO.requests.AnnouncementRequest;
 import com.psbags.PSBags.DTO.response.ProductResponse;
 import com.psbags.PSBags.DTO.response.UserWithOrderStatsDTO;
 import com.psbags.PSBags.DTO.response.AdminOrderResponse;
 import com.psbags.PSBags.DTO.response.DashboardResponse;
+import com.psbags.PSBags.DTO.response.AnnouncementResponse;
 import com.psbags.PSBags.Model.Product;
 import com.psbags.PSBags.Model.UserOrders;
 import com.psbags.PSBags.Service.ProductService;
 import com.psbags.PSBags.Service.OrderService;
+import com.psbags.PSBags.Service.AnnouncementService;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("/admin")
@@ -36,6 +40,9 @@ public class  AdminController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private AnnouncementService announcementService;
 
     @PostMapping(value = "/addProduct", consumes = "multipart/form-data")
     public ProductResponse addProduct(@ModelAttribute ProductRequests productRequests) throws IOException {
@@ -128,5 +135,24 @@ public class  AdminController {
        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     		String email = authentication.getName();
         return this.orderService.countForDashboard(email);
+    }
+
+    // Announcement endpoints
+    @GetMapping("/announcement")
+    public ResponseEntity<AnnouncementResponse> getCurrentAnnouncement() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        
+        AnnouncementResponse response = announcementService.getCurrentAnnouncement();
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/announcement")
+    public ResponseEntity<AnnouncementResponse> updateAnnouncement(@RequestBody AnnouncementRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        
+        AnnouncementResponse response = announcementService.updateAnnouncement(request, email);
+        return ResponseEntity.ok(response);
     }
 }

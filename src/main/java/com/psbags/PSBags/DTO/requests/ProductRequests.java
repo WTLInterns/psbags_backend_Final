@@ -44,6 +44,8 @@ public class ProductRequests {
 
     private MultipartFile image4;
 
+    private MultipartFile image5;
+
     private String date;
 
     private String time;

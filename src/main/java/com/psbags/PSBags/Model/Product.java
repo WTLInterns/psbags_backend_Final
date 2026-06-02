@@ -62,6 +62,10 @@ public class Product {
 
     private String imagePublicId4;
 
+    private String imageUrl5;
+
+    private String imagePublicId5;
+
     
     private String category;
 
