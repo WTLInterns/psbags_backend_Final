@@ -50,12 +50,12 @@ public class PublicController {
         return this.productService.getLatestProducts();
     }
 
-
-
     @GetMapping("/getProductById/{id}")
     public Product getProductById(@PathVariable int id){
         return this.productService.getByIdProductId(id);
-    } 
+    }
+
+
 
     @GetMapping("/announcements")
     public ResponseEntity<AnnouncementResponse> getActiveAnnouncements() {

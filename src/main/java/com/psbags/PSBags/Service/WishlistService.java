@@ -49,7 +49,7 @@ public class WishlistService {
                 .orElseThrow(()->new RuntimeException("Wishlist item not found"));
         
         // Check if the wishlist item belongs to the user
-        if (wishlist.getUser().getId() != user.getId()) {
+        if (!java.util.Objects.equals(wishlist.getUser().getId(), user.getId())) {
             throw new RuntimeException("You are not authorized to delete this wishlist item");
         }
         

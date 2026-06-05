@@ -40,10 +40,10 @@ public class SecurityConfig {
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 	    http.authorizeHttpRequests(request -> 
 	        request
-	            .requestMatchers("/auth/**","/public/**", "/oauth2/**", "/login/oauth2/**").permitAll()  
+	            .requestMatchers("/auth/**","/public/**", "/api/products/**", "/oauth2/**", "/login/oauth2/**").permitAll()  
 	            .requestMatchers("/admin/subcategory/**").permitAll() // Temporarily allow for testing
 	            .requestMatchers("/admin/**").hasAnyAuthority("ADMIN")
-	            .requestMatchers("/user/**").hasAnyAuthority("USER")
+	            .requestMatchers("/user/**", "/api/cart/**", "/api/wishlist/**").hasAnyAuthority("USER")
 				.requestMatchers("/common/reset-password").hasAnyRole("USER", "ADMIN")
 	            .anyRequest().authenticated()                 
 	    );

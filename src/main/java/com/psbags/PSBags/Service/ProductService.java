@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.psbags.PSBags.DTO.requests.ProductRequests;
@@ -291,7 +294,21 @@ public ProductResponse updateProduct(int productId, ProductRequests request, Str
         return this.productRepo.findById(id).orElseThrow(()->new CustomException("Product not found with that Id"+id));
     }
 
+    public List<Product> getLatestProductsBySubcategory(String category) {
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
-    
+        return productRepo.findAll().stream()
+                .filter(product -> product.getSubcategoryName() != null && !product.getSubcategoryName().isEmpty())
+                .filter(product -> category == null || category.isEmpty() || (product.getCategory() != null && product.getCategory().equalsIgnoreCase(category)))
+                .collect(Collectors.groupingBy(Product::getSubcategoryName,
+                        Collectors.collectingAndThen(
+                                Collectors.maxBy(Comparator.comparing(product -> 
+                                        LocalDateTime.parse(product.getDate() + " " + product.getTime(), 
+                                                DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")))),
+                                Optional::get)))
+                .values().stream()
+                .collect(Collectors.toList());
+    }
 
 }
