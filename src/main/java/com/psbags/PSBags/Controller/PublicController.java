@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.psbags.PSBags.Model.Product;
+import com.psbags.PSBags.Model.Blog;
 import com.psbags.PSBags.Service.ProductService;
+import com.psbags.PSBags.Service.BlogService;
 import com.psbags.PSBags.Service.AnnouncementService;
 import com.psbags.PSBags.DTO.response.AnnouncementResponse;
 
@@ -24,6 +26,9 @@ public class PublicController {
     
     @Autowired
     private AnnouncementService announcementService;
+
+    @Autowired
+    private BlogService blogService;
     
 
      @GetMapping("/getAllProducts")
@@ -61,7 +66,33 @@ public class PublicController {
     public ResponseEntity<AnnouncementResponse> getActiveAnnouncements() {
         AnnouncementResponse response = announcementService.getActiveAnnouncements();
         return ResponseEntity.ok(response);
-    } 
+    }
+
+    // Blog public endpoints
+    @GetMapping("/blogs")
+    public List<Blog> getAllBlogs() {
+        return blogService.getAllBlogs();
+    }
+
+    @GetMapping("/blogs/{slug}")
+    public Blog getBlogBySlug(@PathVariable String slug) {
+        return blogService.getBlogBySlug(slug);
+    }
+
+    @GetMapping("/blogs/category/{category}")
+    public List<Blog> getBlogsByCategory(@PathVariable String category) {
+        return blogService.getBlogsByCategory(category);
+    }
+
+    @GetMapping("/blogs/featured")
+    public List<Blog> getFeaturedBlogs() {
+        return blogService.getFeaturedBlogs();
+    }
+
+    @GetMapping("/blogs/latest")
+    public List<Blog> getLatestBlogs() {
+        return blogService.getLatestBlogs();
+    }
 
     
 }
