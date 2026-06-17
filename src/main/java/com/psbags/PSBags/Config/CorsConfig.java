@@ -18,6 +18,7 @@ public class CorsConfig {
         // Allow specific origins
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:3000",
+            "https://regaloobyps.com",
             "http://localhost:3001",
             "http://127.0.0.1:3000",
             "http://127.0.0.1:3001",

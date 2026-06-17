@@ -17,50 +17,46 @@ import com.psbags.PSBags.Service.AnnouncementService;
 import com.psbags.PSBags.DTO.response.AnnouncementResponse;
 
 @RestController
-@RequestMapping("/public")  
+@RequestMapping("/public")
 public class PublicController {
-
 
     @Autowired
     private ProductService productService;
-    
+
     @Autowired
     private AnnouncementService announcementService;
 
     @Autowired
     private BlogService blogService;
-    
 
-     @GetMapping("/getAllProducts")
-    public List<Product> getAllProducts(){
-         
+    @GetMapping("/getAllProducts")
+    public List<Product> getAllProducts() {
+
         return productService.getAllProducts();
     }
 
     @GetMapping("/getProductByCategory")
-    public List<Product> getAllProductsByCategory(@RequestParam String category){ 
-        
+    public List<Product> getAllProductsByCategory(@RequestParam String category) {
+
         return this.productService.getProductsByCategory(category);
     }
 
     @GetMapping("/getProductBySubcategory")
-    public List<Product> getAllProductsBySubcategory(@RequestParam String subcategoryName){ 
-        
+    public List<Product> getAllProductsBySubcategory(@RequestParam String subcategoryName) {
+
         return this.productService.getProductsBySubcategory(subcategoryName);
     }
 
     @GetMapping("/getLatestProducts")
-    public List<Product> getLatestProducts(){
-        
+    public List<Product> getLatestProducts() {
+
         return this.productService.getLatestProducts();
     }
 
     @GetMapping("/getProductById/{id}")
-    public Product getProductById(@PathVariable int id){
+    public Product getProductById(@PathVariable int id) {
         return this.productService.getByIdProductId(id);
     }
-
-
 
     @GetMapping("/announcements")
     public ResponseEntity<AnnouncementResponse> getActiveAnnouncements() {
@@ -79,14 +75,9 @@ public class PublicController {
         return blogService.getBlogBySlug(slug);
     }
 
-    @GetMapping("/blogs/category/{category}")
-    public List<Blog> getBlogsByCategory(@PathVariable String category) {
-        return blogService.getBlogsByCategory(category);
-    }
-
-    @GetMapping("/blogs/featured")
-    public List<Blog> getFeaturedBlogs() {
-        return blogService.getFeaturedBlogs();
+    @GetMapping("/blogs/active")
+    public List<Blog> getActiveBlogs() {
+        return blogService.getActiveBlogs();
     }
 
     @GetMapping("/blogs/latest")
@@ -94,5 +85,4 @@ public class PublicController {
         return blogService.getLatestBlogs();
     }
 
-    
 }
