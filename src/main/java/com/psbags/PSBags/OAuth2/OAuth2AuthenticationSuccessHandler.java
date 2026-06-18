@@ -40,7 +40,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String token = jwtUtils.generateToken(user);
 
         // Redirect to frontend with token
-        String targetUrl = "https://regaloobyps.com/auth/callback?token="
+        String targetUrl = "https://api.regaloobyps.com/auth/callback?token="
                 + URLEncoder.encode(token, StandardCharsets.UTF_8);
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
