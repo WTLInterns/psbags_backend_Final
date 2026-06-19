@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Data
@@ -17,7 +18,8 @@ public class AdminProfile {
 
     private String department; 
 
-      @ManyToOne
+    @ManyToOne
     @JoinColumn(name = "user_id")
+    @ToString.Exclude  // Prevent circular reference in toString()
     private User user; 
 }

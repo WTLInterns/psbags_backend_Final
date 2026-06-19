@@ -38,27 +38,48 @@ public class SecurityConfig {
 	
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+		System.out.println("==================== DEBUG START - SECURITY CONFIG ====================");
+		System.out.println("[SECURITY CONFIG] Initializing SecurityFilterChain");
+		System.out.println("[SECURITY CONFIG] Configuring authentication requirements...");
+		
 	    http.authorizeHttpRequests(request -> 
 	        request
 	            .requestMatchers("/auth/**","/public/**", "/api/products/**", "/oauth2/**", "/login/oauth2/**").permitAll()  
 	            .requestMatchers("/admin/subcategory/**").permitAll() // Temporarily allow for testing
 	            .requestMatchers("/admin/**").hasAnyAuthority("ADMIN")
-	            .requestMatchers("/user/**", "/api/cart/**", "/api/wishlist/**").hasAnyAuthority("USER")
+	            .requestMatchers("/user/**", "/api/cart/**", "/api/wishlist/**").hasAnyAuthority("USER", "ADMIN")  // FIXED: Allow ADMIN to access cart/wishlist
 				.requestMatchers("/common/reset-password").hasAnyRole("USER", "ADMIN")
 	            .anyRequest().authenticated()                 
 	    );
+	    
+	    System.out.println("[SECURITY CONFIG] Endpoint Security:");
+	    System.out.println("  - /auth/**, /public/**, /oauth2/**: PERMIT ALL");
+	    System.out.println("  - /admin/**: REQUIRES ADMIN");
+	    System.out.println("  - /api/cart/**, /api/wishlist/**: REQUIRES USER or ADMIN");
+	    System.out.println("  - All other: AUTHENTICATED");
+	    
 	    http.csrf(csrf -> csrf.disable());
 	    http.csrf(AbstractHttpConfigurer::disable);
 		http.cors(Customizer.withDefaults());
 		
+		System.out.println("[SECURITY CONFIG] CSRF: DISABLED");
+		System.out.println("[SECURITY CONFIG] CORS: ENABLED (default)");
+		
 		// OAuth2 Login Configuration
+		System.out.println("[SECURITY CONFIG] Configuring OAuth2 Login...");
 		http.oauth2Login(oauth2 -> oauth2
 			.userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
 			.successHandler(oAuth2AuthenticationSuccessHandler)
 		);
+		System.out.println("[SECURITY CONFIG] OAuth2 Login: CONFIGURED");
+		System.out.println("[SECURITY CONFIG] ⚠️ WARNING: No explicit login page set - may intercept API requests!");
 		
+		System.out.println("[SECURITY CONFIG] Adding JWT Auth Filter before UsernamePasswordAuthenticationFilter");
 		http.authenticationProvider(authenticationProvider()).addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
+		System.out.println("[SECURITY CONFIG] ✅ SecurityFilterChain configured successfully");
+		System.out.println("==================== DEBUG END - SECURITY CONFIG ====================");
+		
 	    return http.build();
 	}
 

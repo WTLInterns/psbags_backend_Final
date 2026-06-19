@@ -11,10 +11,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Data
@@ -42,10 +42,12 @@ public class Address {
 
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
+    @ToString.Exclude  // Prevent circular reference in toString()
     private User user;
 
 
    @OneToMany(mappedBy = "address")
+   @ToString.Exclude  // Prevent circular reference in toString()
     private List<UserOrders> userOrders;
 
     

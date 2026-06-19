@@ -24,11 +24,20 @@ public class UserDetailsServiceImpl implements UserDetailsService{
 	
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+		System.out.println("==================== DEBUG START - LOAD USER BY USERNAME ====================");
+		System.out.println("[USER DETAILS SERVICE] Loading user by username: " + username);
+		
         User user = this.userRepo.findByEmail(username).orElseThrow();
 
         if (user != null) {
+        	System.out.println("[USER DETAILS SERVICE] ✅ User found - ID: " + user.getId() + ", Email: " + user.getEmail());
+        	System.out.println("[USER DETAILS SERVICE] User role: " + user.getRole());
+        	System.out.println("[USER DETAILS SERVICE] User authorities: " + user.getAuthorities());
+        	System.out.println("==================== DEBUG END - LOAD USER BY USERNAME ====================");
             return user;
         } else {
+        	System.err.println("[USER DETAILS SERVICE] ❌ User not found for username: " + username);
+        	System.out.println("==================== DEBUG END - LOAD USER BY USERNAME ====================");
             throw new UsernameNotFoundException("User not found with username: " + username);
         }
 	}

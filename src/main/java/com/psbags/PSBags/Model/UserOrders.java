@@ -6,10 +6,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Data
@@ -39,10 +39,12 @@ public class UserOrders {
 
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
+    @ToString.Exclude  // Prevent circular reference in toString()
     private User user;
 
      @ManyToOne
     @JoinColumn(name = "address_id", referencedColumnName = "id")
+    @ToString.Exclude  // Prevent circular reference in toString()
     private Address address;
 
     
