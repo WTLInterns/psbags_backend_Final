@@ -52,7 +52,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         System.out.println("[OAUTH2] JWT token generated: " + token.substring(0, Math.min(30, token.length())) + "...");
 
         // Redirect to frontend with token
-        String targetUrl = "http://localhost:8086/auth/callback?token="
+        String targetUrl = "https://api.regaloobyps.com/auth/callback?token="
                 + URLEncoder.encode(token, StandardCharsets.UTF_8);
         
         System.out.println("[OAUTH2] Redirect Target URL: " + targetUrl);
