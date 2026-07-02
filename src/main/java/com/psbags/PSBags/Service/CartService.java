@@ -27,6 +27,7 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ProductRepo productRepository;
     private final UserRepo userRepository;
+    private final AppSettingsService appSettingsService;
 
     // for creating or getting the cart, we will find if the cart is present for that user if yes then we will fetch that cart if not
     // then we will assign him newCart
@@ -141,15 +142,24 @@ public class CartService {
             throw new RuntimeException("Invalid cart or user");
         }
 
-        List<CartItemResponse> itemResponses = cart.getItems() == null ? 
-                new ArrayList<>() : 
+        List<CartItemResponse> itemResponses = cart.getItems() == null ?
+                new ArrayList<>() :
                 cart.getItems().stream()
                         .map(this::convertToCartItemResponse)
                         .collect(Collectors.toList());
 
-        double totalAmount = itemResponses.stream()
+        double subtotal = itemResponses.stream()
                 .mapToDouble(CartItemResponse::getLineTotal)
                 .sum();
+
+        double highestShipping = itemResponses.stream()
+                .mapToDouble(i -> i.getShippingCost() != null ? i.getShippingCost() : 0.0)
+                .max()
+                .orElse(0.0);
+
+        double gstPercentage = appSettingsService.getGstPercentage();
+        double gstAmount = Math.round(subtotal * gstPercentage) / 100.0;
+        double grandTotal = subtotal + highestShipping + gstAmount;
 
         int totalItems = itemResponses.stream()
                 .mapToInt(CartItemResponse::getQuantity)
@@ -159,7 +169,11 @@ public class CartService {
                 cart.getId(),
                 cart.getUser().getId(),
                 itemResponses,
-                totalAmount,
+                subtotal,
+                highestShipping,
+                gstPercentage,
+                gstAmount,
+                grandTotal,
                 totalItems
         );
     }
@@ -189,7 +203,9 @@ public class CartService {
                 product.getPrice(),
                 product.getImageUrl(),
                 product.getCategory(),
-                product.getIsActive()
+                product.getIsActive(),
+                product.getShippingType() != null ? product.getShippingType() : "FREE",
+                product.getShippingCost() != null ? product.getShippingCost() : 0.0
         );
     }
 

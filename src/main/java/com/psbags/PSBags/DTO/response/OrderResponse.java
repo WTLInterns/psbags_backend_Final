@@ -19,4 +19,11 @@ public class OrderResponse {
     private String image;
     private int userId;
     private String message;
+
+    // Pricing snapshot
+    private Double subtotal;
+    private Double shippingCost;
+    private Double gstPercentage;
+    private Double gstAmount;
+    private Double grandTotal;
 }

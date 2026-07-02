@@ -21,4 +21,6 @@ public class CartItemResponse {
     private String imageUrl;
     private String category;
     private String isActive;
+    private String shippingType;
+    private Double shippingCost;
 }

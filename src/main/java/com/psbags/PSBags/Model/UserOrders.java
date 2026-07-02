@@ -37,6 +37,13 @@ public class UserOrders {
     private Long awbCode;
     private String trackingUrl;
 
+    // Pricing snapshot — immutable after order is placed
+    private Double subtotal;
+    private Double shippingCost;
+    private Double gstPercentage;
+    private Double gstAmount;
+    private Double grandTotal;
+
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ToString.Exclude  // Prevent circular reference in toString()

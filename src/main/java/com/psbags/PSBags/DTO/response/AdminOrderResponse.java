@@ -23,4 +23,11 @@ public class AdminOrderResponse {
     private String lastName;
     private String email;
     private String phoneNumber;
+
+    // Pricing snapshot
+    private Double subtotal;
+    private Double shippingCost;
+    private Double gstPercentage;
+    private Double gstAmount;
+    private Double grandTotal;
 }

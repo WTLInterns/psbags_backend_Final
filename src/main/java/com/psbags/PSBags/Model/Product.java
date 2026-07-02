@@ -75,6 +75,9 @@ public class Product {
 
     private String time;
 
+    private String shippingType; // FREE or PAID
+
+    private Double shippingCost; // 0 if FREE
 
     @OneToMany
     private List<Review> reviews;

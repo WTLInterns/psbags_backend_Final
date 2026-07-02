@@ -55,6 +55,8 @@ public class ProductService {
         products.setXXL(productRequests.getXXL());
         products.setCategory(productRequests.getCategory());
         products.setSubcategoryName(productRequests.getSubcategoryName());
+        products.setShippingType(productRequests.getShippingType() != null ? productRequests.getShippingType() : "FREE");
+        products.setShippingCost("PAID".equalsIgnoreCase(productRequests.getShippingType()) && productRequests.getShippingCost() != null ? productRequests.getShippingCost() : 0.0);
 
         // Parallel image uploads using CompletableFuture
         List<CompletableFuture<Void>> uploadFutures = new ArrayList<>();
@@ -174,6 +176,8 @@ public ProductResponse updateProduct(int productId, ProductRequests request, Str
         product.setXXL(request.getXXL());
         product.setCategory(request.getCategory());
         product.setSubcategoryName(request.getSubcategoryName());
+        product.setShippingType(request.getShippingType() != null ? request.getShippingType() : "FREE");
+        product.setShippingCost("PAID".equalsIgnoreCase(request.getShippingType()) && request.getShippingCost() != null ? request.getShippingCost() : 0.0);
         product.setDate(request.getDate());
         product.setTime(request.getTime());
         product.setDiscount(request.getDiscount());

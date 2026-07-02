@@ -1,5 +1,6 @@
 package com.psbags.PSBags.Service;
 
+import com.psbags.PSBags.Service.AppSettingsService;
 import com.psbags.PSBags.DTO.requests.BuyNowRequest;
 import com.psbags.PSBags.DTO.response.OrderResponse;
 import com.psbags.PSBags.DTO.response.UserWithOrderStatsDTO;
@@ -50,6 +51,7 @@ public class OrderService {
     private final ProductRepo productRepository;
     private final UserOrdersRepo orderRepository;
     private final CartService cartService;
+    private final AppSettingsService appSettingsService;
 
     @Autowired
     private AddressRepo addresssRepo;
@@ -112,7 +114,8 @@ public class OrderService {
                 savedOrder.getSize(),
                 savedOrder.getImage(),
                 user.getId(),
-                "Order placed successfully"
+                "Order placed successfully",
+                null, null, null, null, null
         );
     }
 
@@ -122,44 +125,50 @@ public class OrderService {
         Address address = addresssRepo.findById(addressId)
                 .orElseThrow(() -> new RuntimeException("Address not found with ID: " + addressId));
 
-
         if (cart.getItems().isEmpty()) {
             throw new RuntimeException("Cart is empty");
         }
 
         User user = cart.getUser();
-        double totalAmount = 0;
+
+        // Validate all items first
+        for (var item : cart.getItems()) {
+            Product product = item.getProduct();
+            if ("0".equals(product.getIsActive())) {
+                throw new RuntimeException("Product " + product.getProductName() + " is no longer available");
+            }
+            if (product.getQuantity() < item.getQuantity()) {
+                throw new RuntimeException("Insufficient stock for " + product.getProductName());
+            }
+        }
+
+        // Compute pricing snapshot using same logic as CartService
+        double subtotal = 0;
+        double highestShipping = 0;
         int totalQuantity = 0;
         int itemCount = cart.getItems().size();
 
         for (var item : cart.getItems()) {
             Product product = item.getProduct();
-
-            if ("0".equals(product.getIsActive())) {
-                throw new RuntimeException("Product " + product.getProductName() + " is no longer available");
-            }
-
-            if (product.getQuantity() < item.getQuantity()) {
-                throw new RuntimeException("Insufficient stock for " + product.getProductName());
-            }
-
-            double price;
-            try {
-                price = Double.parseDouble(product.getPrice());
-            } catch (NumberFormatException e) {
-                throw new RuntimeException("Invalid price format for product: " + product.getProductName());
-            }
-            totalAmount += price * item.getQuantity();
+            double price = Double.parseDouble(product.getPrice());
+            subtotal += price * item.getQuantity();
             totalQuantity += item.getQuantity();
+            double itemShipping = product.getShippingCost() != null ? product.getShippingCost() : 0.0;
+            if (itemShipping > highestShipping) highestShipping = itemShipping;
         }
 
+        double gstPercentage = appSettingsService.getGstPercentage();
+        double gstAmount = Math.round(subtotal * gstPercentage) / 100.0;
+        double grandTotal = subtotal + highestShipping + gstAmount;
 
+        // Deduct stock
         for (var item : cart.getItems()) {
             Product product = item.getProduct();
             product.setQuantity(product.getQuantity() - item.getQuantity());
             productRepository.save(product);
         }
 
+        // Save one order row per cart item, each carrying the full pricing snapshot
         List<UserOrders> savedOrders = new ArrayList<>();
         for (var item : cart.getItems()) {
             Product product = item.getProduct();
@@ -178,6 +187,12 @@ public class OrderService {
             lineOrder.setPaymentStatus("SUCCESS");
             lineOrder.setPaymentType("RAZORPAY");
             lineOrder.setAddress(address);
+            // Pricing snapshot
+            lineOrder.setSubtotal(subtotal);
+            lineOrder.setShippingCost(highestShipping);
+            lineOrder.setGstPercentage(gstPercentage);
+            lineOrder.setGstAmount(gstAmount);
+            lineOrder.setGrandTotal(grandTotal);
             UserOrders persisted = orderRepository.save(lineOrder);
             savedOrders.add(persisted);
         }
@@ -253,14 +268,15 @@ public class OrderService {
         return new OrderResponse(
                 0,
                 LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
-                totalAmount,
+                grandTotal,
                 "CONFIRMED",
                 "MULTIPLE ITEMS (" + itemCount + ")",
                 totalQuantity,
                 "MIXED",
                 null,
                 user.getId(),
-                "Order placed successfully from cart with " + itemCount + " items"
+                "Order placed successfully from cart with " + itemCount + " items",
+                subtotal, highestShipping, gstPercentage, gstAmount, grandTotal
         );
     }
 
@@ -336,7 +352,9 @@ public class OrderService {
                         order.getSize(),
                         order.getImage(),
                         user.getId(),
-                        ""
+                        "",
+                        order.getSubtotal(), order.getShippingCost(),
+                        order.getGstPercentage(), order.getGstAmount(), order.getGrandTotal()
                 ))
                 .collect(Collectors.toList());
     }
@@ -362,7 +380,12 @@ public List<AdminOrderResponse> getAllOrdersForAdmin(String email) {
                         u != null ? u.getFirstName() : null,
                         u != null ? u.getLastName() : null,
                         u != null ? u.getEmail() : null,
-                        u != null ? u.getPhoneNumber() : null
+                        u != null ? u.getPhoneNumber() : null,
+                        order.getSubtotal(),
+                        order.getShippingCost(),
+                        order.getGstPercentage(),
+                        order.getGstAmount(),
+                        order.getGrandTotal()
                 );
             })
             .collect(Collectors.toList());
@@ -395,22 +418,18 @@ public List<AdminOrderResponse> getAllOrdersForAdmin(String email) {
 
     public AdminOrderResponse getOrderById(int orderId, String email){
         User user = this.userRepository.findByEmail(email).orElseThrow();
-    UserOrders order = orderRepository.findById(orderId).orElseThrow();
-    return new AdminOrderResponse(order.getId(),
-    order.getOrderDate(),
-    order.getTotalAmount(),
-    order.getStatus(),
-    order.getProductName(),
-    order.getQuantity(),
-    order.getSize(),order.getImage(),
-    order.getUser().getId(),
-    order.getUser().getFirstName(),
-    order.getUser().getLastName(),
-    order.getUser().getEmail(),
-    order.getUser().getPhoneNumber());
-       
-        
-}
+        UserOrders order = orderRepository.findById(orderId).orElseThrow();
+        return new AdminOrderResponse(
+            order.getId(), order.getOrderDate(), order.getTotalAmount(),
+            order.getStatus(), order.getProductName(), order.getQuantity(),
+            order.getSize(), order.getImage(),
+            order.getUser().getId(), order.getUser().getFirstName(),
+            order.getUser().getLastName(), order.getUser().getEmail(),
+            order.getUser().getPhoneNumber(),
+            order.getSubtotal(), order.getShippingCost(),
+            order.getGstPercentage(), order.getGstAmount(), order.getGrandTotal()
+        );
+    }
 
 
 
@@ -465,8 +484,8 @@ public DashboardResponse countForDashboard(String email) {
 
         double totalPrice = orderRepository.findAll()
                 .stream()
-                .filter(o->o.getStatus().equals("DELIVERED"))
-                .mapToDouble(UserOrders::getTotalAmount)   
+                .filter(o -> o.getStatus().equals("DELIVERED"))
+                .mapToDouble(o -> o.getGrandTotal() != null ? o.getGrandTotal() : o.getTotalAmount())
                 .sum();
 
         return new DashboardResponse(orderCount, (int) totalPrice, productCount, customerCount);

@@ -55,4 +55,8 @@ public class ProductRequests {
     private String category;
 
     private String subcategoryName;
+
+    private String shippingType; // FREE or PAID
+
+    private Double shippingCost;
 }
